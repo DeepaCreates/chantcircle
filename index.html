@@ -1,0 +1,40 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ChantCircle</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>ChantCircle</h1>
+    <p>Connect spiritually by chanting with others worldwide.</p>
+  </header>
+  <main>
+    <section id="chant-room">
+      <h2>Join the Chant</h2>
+      <p>Active Chanters: <span id="active-users">0</span></p>
+      <p>Mantra: <span id="current-mantra">"Om Mani Padme Hum"</span></p>
+      <div id="timer-controls">
+        <button id="start-chant">Start Chanting</button>
+        <button id="stop-chant" disabled>Stop Chanting</button>
+        <p>Time Remaining: <span id="chant-timer">300</span> seconds</p>
+      </div>
+      <audio id="chant-audio" src="chant.mp3" loop></audio>
+      <button id="mute-toggle">Mute Myself</button>
+    </section>
+
+
+    <section id="feedback">
+      <h3>Suggest a Mantra or Leave Feedback</h3>
+      <textarea id="comment" placeholder="Share your thoughts or suggest a mantra"></textarea>
+      <button id="submit-comment">Submit Feedback</button>
+    </section>
+  </main>
+  <footer>
+    <p>&copy; 2024 ChantCircle. Made for unity and peace.</p>
+  </footer>
+  <script src="script.js"></script>
+</body>
+</html>
