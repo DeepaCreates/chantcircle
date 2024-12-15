@@ -10,31 +10,29 @@ const submitCommentBtn = document.getElementById('submit-comment');
 const commentsList = document.getElementById('comments-list');
 
 let timer, timeLeft = 300;
-let isMuted = false;
+let isMuted = true;
+let mediaStream = null;
 
 // Simulate active users and chant synchronization
 function updateActiveUsers(change) {
   const currentCount = parseInt(localStorage.getItem('activeUsers')) || 0;
   const newCount = Math.max(currentCount + change, 0);
   localStorage.setItem('activeUsers', newCount);
-  activeUsersEl.textContent = newCount;
+  broadcastChanterCount(newCount);
 }
 
-// Initialize active users count
-updateActiveUsers(0);
+// Continuously update active user count across windows
+function broadcastChanterCount(count) {
+  localStorage.setItem('activeUsers', count);
+  activeUsersEl.textContent = count;
+}
 
-// Synchronize chanting state
-function syncChantState() {
-  if (localStorage.getItem('chanting') === 'true') {
-    chantAudio.play();
-    startBtn.disabled = true;
-    stopBtn.disabled = false;
-  } else {
-    chantAudio.pause();
-    startBtn.disabled = false;
-    stopBtn.disabled = true;
+// Listen for changes to active user count in other windows
+window.addEventListener('storage', (event) => {
+  if (event.key === 'activeUsers') {
+    activeUsersEl.textContent = event.newValue || 0;
   }
-}
+});
 
 // Start Chanting
 function startChant() {
@@ -63,13 +61,42 @@ function stopChant() {
   clearInterval(timer);
   localStorage.setItem('chanting', 'false');
   updateActiveUsers(-1);
+
+  // If microphone is active, stop the stream
+  if (mediaStream) {
+    const tracks = mediaStream.getTracks();
+    tracks.forEach((track) => track.stop());
+    mediaStream = null;
+  }
+  muteToggle.textContent = 'Unmute Myself';
+  isMuted = true;
 }
 
-// Mute/Unmute Myself
-muteToggle.addEventListener('click', () => {
-  isMuted = !isMuted;
-  chantAudio.muted = isMuted;
-  muteToggle.textContent = isMuted ? 'Unmute Myself' : 'Mute Myself';
+// Unmute Myself (Enable microphone access)
+muteToggle.addEventListener('click', async () => {
+  if (isMuted) {
+    try {
+      // Request microphone access
+      mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      muteToggle.textContent = 'Mute Myself';
+      isMuted = false;
+
+      // Broadcast audio stream logic can be added here
+      console.log('Microphone is now active for broadcasting.');
+    } catch (error) {
+      alert('Microphone access denied. Please allow microphone permissions to be heard by others.');
+    }
+  } else {
+    // Mute microphone
+    if (mediaStream) {
+      const tracks = mediaStream.getTracks();
+      tracks.forEach((track) => track.stop());
+      mediaStream = null;
+    }
+    muteToggle.textContent = 'Unmute Myself';
+    isMuted = true;
+    console.log('Microphone has been muted.');
+  }
 });
 
 // Display Comments
@@ -102,4 +129,17 @@ stopBtn.addEventListener('click', stopChant);
 // Initialize App State
 updateActiveUsers(0);
 loadComments();
+
+// Sync chant state
+function syncChantState() {
+  if (localStorage.getItem('chanting') === 'true') {
+    chantAudio.play();
+    startBtn.disabled = true;
+    stopBtn.disabled = false;
+  } else {
+    chantAudio.pause();
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+  }
+}
 syncChantState();
