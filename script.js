@@ -12,6 +12,9 @@ const commentsList = document.getElementById('comments-list');
 let timer, timeLeft = 300;
 let isMuted = true;
 let mediaStream = null;
+let audioContext = null;
+let audioSources = [];
+let gainNode = null;
 
 // Simulate active users and chant synchronization
 function updateActiveUsers(change) {
@@ -42,6 +45,9 @@ function startChant() {
   localStorage.setItem('chanting', 'true');
   updateActiveUsers(1);
 
+  // Listen to others
+  startListeningToOthers();
+
   // Timer logic
   timer = setInterval(() => {
     if (timeLeft > 0) {
@@ -62,6 +68,9 @@ function stopChant() {
   localStorage.setItem('chanting', 'false');
   updateActiveUsers(-1);
 
+  // Stop listening to others
+  stopListeningToOthers();
+
   // If microphone is active, stop the stream
   if (mediaStream) {
     const tracks = mediaStream.getTracks();
@@ -78,10 +87,13 @@ muteToggle.addEventListener('click', async () => {
     try {
       // Request microphone access
       mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const audioTrack = mediaStream.getAudioTracks()[0];
+
+      // Send audio track to the mix for others
+      syncChantInput(audioTrack);
+
       muteToggle.textContent = 'Mute Myself';
       isMuted = false;
-
-      // Broadcast audio stream logic can be added here
       console.log('Microphone is now active for broadcasting.');
     } catch (error) {
       alert('Microphone access denied. Please allow microphone permissions to be heard by others.');
@@ -98,6 +110,55 @@ muteToggle.addEventListener('click', async () => {
     console.log('Microphone has been muted.');
   }
 });
+
+// Listen to Others
+function startListeningToOthers() {
+  if (!audioContext) {
+    audioContext = new AudioContext();
+    gainNode = audioContext.createGain();
+    gainNode.connect(audioContext.destination);
+  }
+
+  // Simulate streams from other users
+  const fakeStream = new Audio(`chant.mp3`);
+  const source = audioContext.createMediaElementSource(fakeStream);
+  source.connect(gainNode);
+  fakeStream.play();
+
+  audioSources.push(source);
+}
+
+function stopListeningToOthers() {
+  audioSources.forEach((source) => {
+    source.disconnect();
+  });
+  audioSources = [];
+}
+
+// Sync Chant Input (AI Sync Magic)
+function syncChantInput(audioTrack) {
+  const context = new AudioContext();
+  const source = context.createMediaStreamSource(new MediaStream([audioTrack]));
+  const gain = context.createGain();
+
+  // Process chant audio
+  source.connect(gain);
+  gain.connect(context.destination);
+
+  // Align chant audio to match the tempo
+  const processor = context.createScriptProcessor(4096, 1, 1);
+  processor.onaudioprocess = (event) => {
+    const inputData = event.inputBuffer.getChannelData(0);
+    const outputData = event.outputBuffer.getChannelData(0);
+
+    for (let i = 0; i < inputData.length; i++) {
+      outputData[i] = inputData[i]; // Basic pass-through for now
+    }
+  };
+
+  source.connect(processor);
+  processor.connect(context.destination);
+}
 
 // Display Comments
 function loadComments() {
